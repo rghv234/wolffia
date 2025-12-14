@@ -6,8 +6,8 @@
 import { appState } from './stores/app.svelte';
 
 // Use env variable or fallback to localhost:3000
-// NOTE: Hardcoded for debugging - env var wasn't working
-const API_BASE = 'http://localhost:3000';
+// Set VITE_API_URL to your Fly.io backend URL in production
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 // Debug: log API base on module load
 console.log('[API] Base URL:', API_BASE);

@@ -2,5 +2,15 @@
     "$schema": "https://openapi.vercel.sh/vercel.json",
     "buildCommand": "npm run build",
     "outputDirectory": "build",
-    "framework": "sveltekit"
+    "framework": "sveltekit",
+    "rewrites": [
+        {
+            "source": "/auth",
+            "destination": "/index.html"
+        },
+        {
+            "source": "/auth/(.*)",
+            "destination": "/index.html"
+        }
+    ]
 }
