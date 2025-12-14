@@ -91,6 +91,11 @@
     // Mobile long-press handler for individual tabs (color picker)
     let tabLongPressTimer: ReturnType<typeof setTimeout> | null = null;
 
+    // Double-tap detection for tab selection (split view)
+    let lastTapTime = 0;
+    let lastTapNoteId: number | string | null = null;
+    const DOUBLE_TAP_THRESHOLD = 300; // ms
+
     function handleTabTouchStart(noteId: number | string) {
         tabLongPressTimer = setTimeout(() => {
             // Center the context menu on mobile
@@ -101,10 +106,25 @@
         }, 500);
     }
 
-    function handleTabTouchEnd() {
+    function handleTabTouchEnd(noteId: number | string) {
         if (tabLongPressTimer) {
             clearTimeout(tabLongPressTimer);
             tabLongPressTimer = null;
+        }
+
+        // Double-tap detection for tab selection
+        const now = Date.now();
+        if (
+            lastTapNoteId === noteId &&
+            now - lastTapTime < DOUBLE_TAP_THRESHOLD
+        ) {
+            // Double-tap detected - toggle tab selection for split view
+            toggleTabSelection(noteId);
+            lastTapTime = 0;
+            lastTapNoteId = null;
+        } else {
+            lastTapTime = now;
+            lastTapNoteId = noteId;
         }
     }
 
@@ -244,7 +264,7 @@
                     onclick={(e) => handleTabClick(tab.noteId, e)}
                     oncontextmenu={(e) => handleTabRightClick(e, tab.noteId)}
                     ontouchstart={() => handleTabTouchStart(tab.noteId)}
-                    ontouchend={handleTabTouchEnd}
+                    ontouchend={() => handleTabTouchEnd(tab.noteId)}
                     onkeydown={(e) =>
                         e.key === "Enter" &&
                         handleTabClick(tab.noteId, e as unknown as MouseEvent)}
