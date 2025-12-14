@@ -1,0 +1,290 @@
+/* ============================================================
+   Wolffia - Main Stylesheet
+   Tailwind CSS v4 + daisyUI v5
+   ============================================================ */
+
+@import "tailwindcss";
+
+/* daisyUI plugin with theme configuration
+   - emerald: Green primary (default for light)
+   - dracula: Dark theme with green accents (auto for prefers-dark)
+*/
+@plugin "daisyui" {
+    themes: emerald --default, dracula --prefersdark;
+}
+
+/* ============================================================
+   Custom CSS Variables
+   ============================================================ */
+:root {
+    --editor-font-size: 14px;
+    --sidebar-width: 280px;
+    --status-bar-height: 2rem;
+    --fab-size: 56px;
+    /* Accent color (updated dynamically by JS) */
+    --accent-color: #ec4899;
+}
+
+/* ============================================================
+   Accent Color Overrides
+   ============================================================ */
+/* Ensure range slider thumb uses accent color */
+.range-primary::-webkit-slider-thumb {
+    background-color: var(--accent-color) !important;
+}
+
+.range-primary::-moz-range-thumb {
+    background-color: var(--accent-color) !important;
+}
+
+/* Radio buttons use primary accent color */
+.radio-primary,
+.radio {
+    accent-color: var(--accent-color) !important;
+    --chkbg: var(--accent-color) !important;
+    border-color: var(--accent-color) !important;
+}
+
+input[type="radio"] {
+    accent-color: var(--accent-color) !important;
+}
+
+input[type="radio"]:checked {
+    background-color: var(--accent-color) !important;
+    border-color: var(--accent-color) !important;
+}
+
+/* daisyUI radio check mark */
+.radio:checked::before {
+    background-color: var(--accent-color) !important;
+}
+
+/* Override daisyUI radio primary color variable */
+.radio-primary:checked,
+.radio:checked {
+    --p: var(--accent-color) !important;
+}
+
+/* Disable browser context menu for custom context menu support */
+* {
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* Allow text selection in editor */
+.editor-textarea,
+input,
+textarea {
+    -webkit-user-select: text;
+    user-select: text;
+}
+
+/* ============================================================
+   Editor Styling
+   ============================================================ */
+.editor-textarea {
+    font-family: ui-monospace, 'Cascadia Code', 'Consolas', 'DejaVu Sans Mono', monospace;
+    font-size: var(--editor-font-size);
+    line-height: 1.6;
+    tab-size: 4;
+    resize: none;
+}
+
+/* Markdown syntax highlighting (visual only) */
+.editor-textarea::placeholder {
+    color: oklch(var(--bc) / 0.4);
+}
+
+/* ============================================================
+   Status Bar
+   ============================================================ */
+.status-bar {
+    height: var(--status-bar-height);
+    min-height: var(--status-bar-height);
+    font-size: 0.75rem;
+}
+
+/* ============================================================
+   Mobile FAB (Floating Action Button)
+   ============================================================ */
+.fab {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    width: var(--fab-size);
+    height: var(--fab-size);
+    z-index: 50;
+}
+
+/* Ensure FAB stays above keyboard on mobile */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+    .fab {
+        bottom: calc(1.5rem + env(safe-area-inset-bottom));
+    }
+}
+
+/* ============================================================
+   FAB Speed-Dial (Flower Pattern)
+   ============================================================ */
+.fab-speed-dial {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.fab-option {
+    position: absolute;
+    transform: translate(var(--fab-offset-x, 0), var(--fab-offset-y, 0)) scale(0);
+    opacity: 0;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+}
+
+/* Show options on hover/focus of speed dial */
+.fab-speed-dial:hover .fab-option,
+.fab-speed-dial:focus-within .fab-option {
+    transform: translate(var(--fab-offset-x, 0), var(--fab-offset-y, 0)) scale(1);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Stagger animation delays */
+.fab-option:nth-child(1) {
+    transition-delay: 0ms;
+}
+
+.fab-option:nth-child(2) {
+    transition-delay: 50ms;
+}
+
+/* FAB icon rotation on hover */
+.fab-speed-dial:hover>button:last-child svg,
+.fab-speed-dial:focus-within>button:last-child svg {
+    transform: rotate(45deg);
+}
+
+/* ============================================================
+   Folder Tree Styling
+   ============================================================ */
+.folder-tree details>summary {
+    cursor: pointer;
+    list-style: none;
+}
+
+.folder-tree details>summary::-webkit-details-marker {
+    display: none;
+}
+
+.folder-tree details[open]>summary .folder-chevron {
+    transform: rotate(90deg);
+}
+
+.folder-chevron {
+    transition: transform 0.2s ease;
+}
+
+/* ============================================================
+   Tab System
+   ============================================================ */
+.tab-bar {
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+
+.tab-bar::-webkit-scrollbar {
+    height: 4px;
+}
+
+.tab-item {
+    max-width: 180px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ============================================================
+   Transitions & Animations
+   ============================================================ */
+.sidebar-transition {
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+/* ============================================================
+   Theme Controller - Larger buttons for desktop
+   ============================================================ */
+.theme-toggle-btn {
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+}
+
+/* ============================================================
+   Print Styles
+   ============================================================ */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+
+    .editor-textarea {
+        border: none;
+        box-shadow: none;
+    }
+}
+
+/* ============================================================
+   OLED Dark Mode - Pure Black #000000
+   Apply by adding data-oled="true" to html element
+   ============================================================ */
+html[data-oled="true"] {
+    --b1: 0 0% 0%;
+    /* Pure black base */
+    --b2: 0 0% 4%;
+    /* Very dark gray for cards */
+    --b3: 0 0% 8%;
+    /* Slightly lighter for inputs */
+}
+
+html[data-oled="true"] body,
+html[data-oled="true"] .bg-base-100 {
+    background-color: #000000 !important;
+}
+
+html[data-oled="true"] .bg-base-200,
+html[data-oled="true"] .sidebar,
+html[data-oled="true"] .modal-box {
+    background-color: #0a0a0a !important;
+}
+
+html[data-oled="true"] .bg-base-300,
+html[data-oled="true"] .card,
+html[data-oled="true"] .dropdown-content {
+    background-color: #141414 !important;
+}
+
+/* ============================================================
+   Dim Dark Mode - Darker Grays
+   Apply by adding data-dim="true" to html element
+   ============================================================ */
+html[data-dim="true"] {
+    --b1: 0 0% 8%;
+    --b2: 0 0% 12%;
+    --b3: 0 0% 16%;
+}
+
+html[data-dim="true"] body,
+html[data-dim="true"] .bg-base-100 {
+    background-color: #141414 !important;
+}
+
+html[data-dim="true"] .bg-base-200,
+html[data-dim="true"] .sidebar,
+html[data-dim="true"] .modal-box {
+    background-color: #1f1f1f !important;
+}
+
+html[data-dim="true"] .bg-base-300,
+html[data-dim="true"] .card,
+html[data-dim="true"] .dropdown-content {
+    background-color: #292929 !important;
+}

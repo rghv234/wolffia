@@ -1,0 +1,85 @@
+# ============================================================
+# Wolffia - Docker Compose / Podman Compose Configuration
+# Self-hosted E2EE Note-taking Workspace
+# ============================================================
+# Usage:
+#   podman-compose up -d          # Start in background
+#   podman-compose logs -f        # Follow logs
+#   podman-compose down           # Stop and remove
+# ============================================================
+
+services:
+  wolffia-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: wolffia-backend:latest
+    container_name: wolffia-api
+    
+    # Security: Read-only root filesystem where possible
+    read_only: true
+    
+    # Tmpfs for runtime directories that need write access
+    tmpfs:
+      - /tmp:mode=1777,size=64M
+    
+    # Persistent storage for SQLite database (simple named volume)
+    volumes:
+      - wolffia-data:/app/data
+    
+    # Port mapping
+    ports:
+      - "3000:3000"
+    
+    # Resource limits (low-resource friendly)
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          cpus: "0.1"
+          memory: 64M
+    
+    # Environment variables
+    environment:
+      - LAPIS_ENV=production
+      - TZ=UTC
+    
+    # Health check (mirrors Dockerfile HEALTHCHECK)
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Security options for rootless Podman
+    security_opt:
+      - no-new-privileges:true
+    
+    # Drop all capabilities, add only what's needed
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# Named volumes for data persistence (Podman will manage this)
+volumes:
+  wolffia-data:
+
+# Network configuration (optional, for multi-container setups)
+networks:
+  default:
+    name: wolffia-network
+    driver: bridge
