@@ -138,6 +138,9 @@ async function readFileAsText(
 export async function exportDecrypted(
     onProgress?: (current: number, total: number) => void
 ): Promise<Blob> {
+    // Dynamic import to avoid bundling if not used
+    const { downloadZip } = await import('client-zip');
+
     const notes = appState.notes;
     const folders = appState.folders;
 
@@ -147,10 +150,8 @@ export async function exportDecrypted(
         folderPaths.set(folder.id, buildFolderPath(folder.id, folders));
     }
 
-    // Create ZIP using the JSZip-like structure
-    // Since we don't have JSZip, we'll create a simple combined file
-    // In production, you'd use a proper ZIP library
-    const exportData: { path: string; content: string }[] = [];
+    // Collect files for ZIP
+    const files: { name: string; input: string }[] = [];
 
     for (let i = 0; i < notes.length; i++) {
         onProgress?.(i + 1, notes.length);
@@ -172,7 +173,7 @@ export async function exportDecrypted(
                 : sanitizeFilename(note.title) + '.md';
             const path = `${folderPath}/${filename}`;
 
-            exportData.push({ path, content });
+            files.push({ name: path, input: content });
 
             // Yield to prevent blocking (batch processing)
             if (i % EXPORT_BATCH_SIZE === 0) {
@@ -183,10 +184,9 @@ export async function exportDecrypted(
         }
     }
 
-    // Generate combined export file (Markdown format)
-    // In production, use proper ZIP library
-    const exportContent = generateExportContent(exportData);
-    return new Blob([exportContent], { type: 'text/plain' });
+    // Create ZIP blob using client-zip
+    const zipBlob = await downloadZip(files).blob();
+    return zipBlob;
 }
 
 /**

@@ -27,9 +27,9 @@ services:
     volumes:
       - wolffia-data:/app/data
     
-    # Port mapping
+    # Port mapping (external:internal - nginx listens on 8080)
     ports:
-      - "3000:3000"
+      - "3000:8080"
     
     # Resource limits (low-resource friendly)
     deploy:

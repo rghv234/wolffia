@@ -110,7 +110,7 @@
             const blob = await exportDecrypted((current, total) => {
                 progress = { current, total };
             });
-            downloadBlob(blob, `wolffia-export-${Date.now()}.md`);
+            downloadBlob(blob, `wolffia-export-${Date.now()}.zip`);
         } catch (e) {
             console.error("Export error:", e);
         } finally {

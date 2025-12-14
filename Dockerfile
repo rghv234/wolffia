@@ -53,6 +53,9 @@ WORKDIR /app
 COPY --chown=wolffia:wolffia ./backend/ /app/
 COPY --chown=wolffia:wolffia ./nginx.conf /usr/local/openresty/nginx/conf/nginx.conf
 
+# Make entrypoint executable
+RUN chmod +x /app/entrypoint.sh
+
 # Create SQLite database directory with proper permissions
 RUN mkdir -p /app/data \
     && chown -R wolffia:wolffia /app/data
@@ -70,5 +73,5 @@ USER wolffia
 # Volume for persistent SQLite database
 VOLUME ["/app/data"]
 
-# Start OpenResty (Nginx with LuaJIT)
-CMD ["openresty", "-g", "daemon off;"]
+# Start with entrypoint script (runs migrations then OpenResty)
+CMD ["/app/entrypoint.sh"]
