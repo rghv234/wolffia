@@ -86,41 +86,69 @@
                 ? baseName
                 : `${baseName}.${saveFormat}`;
 
-            // Create note in database
-            const result = await notesApi.create({
-                title: fullTitle,
-                content_blob: contentBlob,
-                folder_id: undefined,
-            });
+            let newNote: {
+                id: number | string;
+                folder_id: number | null;
+                title: string;
+                content_blob: string;
+                updated_at: string;
+            };
 
-            if (result.data) {
-                // Add to local state
-                const newNote = {
+            // Check if logged in - if not, save locally
+            if (appState.token) {
+                // Online mode: save to server
+                const result = await notesApi.create({
+                    title: fullTitle,
+                    content_blob: contentBlob,
+                    folder_id: undefined,
+                });
+
+                if (!result.data) {
+                    throw new Error(result.error || "Failed to save note");
+                }
+
+                newNote = {
                     id: result.data.id,
                     folder_id: null,
                     title: fullTitle,
                     content_blob: contentBlob,
                     updated_at: new Date().toISOString(),
                 };
-                appState.notes.unshift(newNote);
-
-                // Open the saved note
-                appState.openTabs.push({
-                    noteId: newNote.id,
-                    title: newNote.title,
-                    isDirty: false,
-                    cursorPosition: 0,
-                    scrollTop: 0,
-                });
-                appState.activeNoteId = newNote.id;
-
-                // Close the untitled tab
-                if (activeNoteId) {
-                    closeUntitledAfterSave(activeNoteId);
-                }
-
-                console.log("[SaveModal] Successfully saved note:", newNote.id);
+            } else {
+                // Offline mode: save to localStorage with local ID
+                const localId = `local-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+                newNote = {
+                    id: localId,
+                    folder_id: null,
+                    title: fullTitle,
+                    content_blob: contentBlob,
+                    updated_at: new Date().toISOString(),
+                };
+                console.log(
+                    "[SaveModal] Saved locally (offline mode):",
+                    localId,
+                );
             }
+
+            // Add to local state (will be persisted to localStorage)
+            appState.notes.unshift(newNote);
+
+            // Open the saved note
+            appState.openTabs.push({
+                noteId: newNote.id,
+                title: newNote.title,
+                isDirty: false,
+                cursorPosition: 0,
+                scrollTop: 0,
+            });
+            appState.activeNoteId = newNote.id;
+
+            // Close the untitled tab
+            if (activeNoteId) {
+                closeUntitledAfterSave(activeNoteId);
+            }
+
+            console.log("[SaveModal] Successfully saved note:", newNote.id);
         } catch (e) {
             console.error("[SaveModal] Failed to save:", e);
         }

@@ -8,7 +8,7 @@ const browser = typeof window !== 'undefined';
 
 // Types
 export interface Note {
-    id: number;
+    id: number | string; // number for server notes, string for local offline notes (e.g., 'local-123')
     folder_id: number | null;
     title: string;
     content_blob: string; // Encrypted
@@ -146,8 +146,9 @@ function createInitialState(): AppState {
         openTabs: persisted.openTabs ?? [],
         activeNoteId: persisted.activeNoteId ?? null,
         expandedFolderIds: persisted.expandedFolderIds ?? new Set(),
-        folders: [],
-        notes: [],
+        // Load persisted notes/folders for offline-first functionality
+        folders: persisted.folders ?? [],
+        notes: persisted.notes ?? [],
         untitledNotes: {}, // Map of untitled notes keyed by 'untitled-1', etc.
         untitledCounter: persisted.untitledCounter ?? 0, // For unique untitled IDs
         scratchpadNote: null, // Legacy, kept for backward compat
@@ -201,6 +202,9 @@ $effect.root(() => {
             splitView: appState.splitView,
             untitledCounter: appState.untitledCounter,
             tabColors: appState.tabColors,
+            // Persist notes for offline-first functionality
+            notes: appState.notes,
+            folders: appState.folders,
         };
 
         localStorage.setItem(STORAGE_KEY, JSON.stringify(toStore));
@@ -228,7 +232,8 @@ export function closeTab(noteId: number | string) {
     const index = appState.openTabs.findIndex(t => t.noteId === noteId);
     if (index === -1) return;
 
-    appState.openTabs.splice(index, 1);
+    // Use filter for proper Svelte 5 reactivity
+    appState.openTabs = appState.openTabs.filter(t => t.noteId !== noteId);
 
     // If this tab was part of split view, disable split mode
     if (appState.splitView?.enabled) {

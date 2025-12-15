@@ -22,6 +22,7 @@
         generateRecoveryCodes,
     } from "$lib/crypto";
     import { appState } from "$lib/stores/app.svelte";
+    import { syncLocalNotesToServer } from "$lib/sync";
     import RecoveryCodesModal from "$lib/components/RecoveryCodesModal.svelte";
 
     // State
@@ -153,6 +154,14 @@
                 user_id: result.data!.user.id,
                 auth_key_hash: passwordHash,
             });
+
+            // Sync any local notes to server (offline-first support)
+            try {
+                await syncLocalNotesToServer();
+            } catch (syncError) {
+                console.warn("[Auth] Failed to sync local notes:", syncError);
+                // Don't block login on sync failure
+            }
 
             // Navigate to app
             goto("/");

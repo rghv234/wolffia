@@ -109,22 +109,19 @@
                     return;
                 }
 
-                const noteIndex = appState.notes.findIndex(
-                    (n) => n.id === pendingNote!.id,
+                // Use filter instead of splice for proper Svelte 5 reactivity
+                const deletedNoteId = pendingNote!.id;
+                appState.notes = appState.notes.filter(
+                    (n) => n.id !== deletedNoteId,
                 );
-                if (noteIndex >= 0) {
-                    appState.notes.splice(noteIndex, 1);
-                }
+
                 // Close tab if open
-                const tabIndex = appState.openTabs.findIndex(
-                    (t) => t.noteId === pendingNote!.id,
+                appState.openTabs = appState.openTabs.filter(
+                    (t) => t.noteId !== deletedNoteId,
                 );
-                if (tabIndex >= 0) {
-                    appState.openTabs.splice(tabIndex, 1);
-                    if (appState.activeNoteId === pendingNote!.id) {
-                        appState.activeNoteId =
-                            appState.openTabs[0]?.noteId ?? null;
-                    }
+                if (appState.activeNoteId === deletedNoteId) {
+                    appState.activeNoteId =
+                        appState.openTabs[0]?.noteId ?? null;
                 }
                 console.log("[Sidebar] Note deleted successfully");
             } catch (e) {

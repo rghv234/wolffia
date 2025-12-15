@@ -44,8 +44,8 @@ export function connectSync() {
         eventSource.close();
     }
 
-    // Use same hardcoded URL as api.ts
-    const apiBase = 'http://localhost:3000';
+    // Use same API URL as api.ts (env variable or fallback)
+    const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:3000';
     eventSource = new EventSource(`${apiBase}/events?token=${encodeURIComponent(appState.token)}`);
 
     eventSource.onopen = () => {
@@ -142,10 +142,8 @@ async function handleSyncEvent(event: SyncEvent) {
             break;
 
         case 'note_deleted':
-            const deleteNoteIndex = appState.notes.findIndex(n => n.id === event.data.id);
-            if (deleteNoteIndex >= 0) {
-                appState.notes.splice(deleteNoteIndex, 1);
-            }
+            // Use filter for proper Svelte 5 reactivity
+            appState.notes = appState.notes.filter(n => n.id !== event.data.id);
             break;
 
         case 'folder_created':
@@ -159,10 +157,8 @@ async function handleSyncEvent(event: SyncEvent) {
             break;
 
         case 'folder_deleted':
-            const deleteFolderIndex = appState.folders.findIndex(f => f.id === event.data.id);
-            if (deleteFolderIndex >= 0) {
-                appState.folders.splice(deleteFolderIndex, 1);
-            }
+            // Use filter for proper Svelte 5 reactivity
+            appState.folders = appState.folders.filter(f => f.id !== event.data.id);
             break;
     }
 }
@@ -218,6 +214,13 @@ export async function loadAllData() {
     try {
         // Try to load from server
         console.log('[Sync] Fetching data from server...');
+
+        // IMPORTANT: Clear stale localStorage data BEFORE fetching from server
+        // This prevents stale notes from persisting when logged in
+        // The server is the source of truth for authenticated users
+        appState.notes = [];
+        appState.folders = [];
+
         const [foldersResult, notesResult] = await Promise.all([
             foldersApi.list(),
             notesApi.list()
@@ -349,11 +352,8 @@ export async function createNote(
         });
 
         if (result.error || !result.data) {
-            // Remove temp note
-            const tempIndex = appState.notes.findIndex(n => n.id === tempId);
-            if (tempIndex >= 0) {
-                appState.notes.splice(tempIndex, 1);
-            }
+            // Remove temp note - use filter for proper Svelte 5 reactivity
+            appState.notes = appState.notes.filter(n => n.id !== tempId);
             return null;
         }
 
@@ -372,24 +372,25 @@ export async function createNote(
 
 /**
  * Delete note with optimistic update
+ * Supports both server notes (number ID) and local notes (string ID)
  */
-export async function deleteNote(noteId: number): Promise<boolean> {
-    const noteIndex = appState.notes.findIndex(n => n.id === noteId);
-    const backup = noteIndex >= 0 ? { ...appState.notes[noteIndex] } : null;
+export async function deleteNote(noteId: number | string): Promise<boolean> {
+    const backup = appState.notes.find(n => n.id === noteId);
 
-    // Optimistic delete
-    if (noteIndex >= 0) {
-        appState.notes.splice(noteIndex, 1);
-    }
+    // Optimistic delete - use filter for proper Svelte 5 reactivity
+    appState.notes = appState.notes.filter(n => n.id !== noteId);
 
-    const result = await notesApi.delete(noteId);
+    // Only call API for server notes (number IDs)
+    if (typeof noteId === 'number') {
+        const result = await notesApi.delete(noteId);
 
-    if (result.error) {
-        // Revert
-        if (backup) {
-            appState.notes.push(backup);
+        if (result.error) {
+            // Revert
+            if (backup) {
+                appState.notes = [...appState.notes, backup];
+            }
+            return false;
         }
-        return false;
     }
 
     return true;
@@ -418,10 +419,8 @@ export async function createFolder(
         const result = await foldersApi.create({ name, parent_id: parentId || undefined, color });
 
         if (result.error || !result.data) {
-            const tempIndex = appState.folders.findIndex(f => f.id === tempId);
-            if (tempIndex >= 0) {
-                appState.folders.splice(tempIndex, 1);
-            }
+            // Use filter for proper Svelte 5 reactivity
+            appState.folders = appState.folders.filter(f => f.id !== tempId);
             return null;
         }
 
@@ -443,12 +442,10 @@ export async function createFolder(
 export async function deleteFolder(folderId: number): Promise<boolean> {
     console.log('[Sync] Deleting folder:', folderId);
 
-    const folderIndex = appState.folders.findIndex(f => f.id === folderId);
-    const backup = folderIndex >= 0 ? { ...appState.folders[folderIndex] } : null;
+    const backup = appState.folders.find(f => f.id === folderId);
 
-    if (folderIndex >= 0) {
-        appState.folders.splice(folderIndex, 1);
-    }
+    // Use filter for proper Svelte 5 reactivity
+    appState.folders = appState.folders.filter(f => f.id !== folderId);
 
     // Also remove notes in this folder from view
     const notesBackup = appState.notes.filter(n => n.folder_id === folderId);
@@ -468,4 +465,68 @@ export async function deleteFolder(folderId: number): Promise<boolean> {
 
     console.log('[Sync] Folder deleted successfully');
     return true;
+}
+
+/**
+ * Sync local notes to server after login
+ * Uploads notes with local-* IDs to server and updates their IDs
+ */
+export async function syncLocalNotesToServer(): Promise<{ synced: number; failed: number }> {
+    const localNotes = appState.notes.filter(n => typeof n.id === 'string' && (n.id as string).startsWith('local-'));
+
+    if (localNotes.length === 0) {
+        console.log('[Sync] No local notes to sync');
+        return { synced: 0, failed: 0 };
+    }
+
+    console.log(`[Sync] Syncing ${localNotes.length} local notes to server`);
+
+    let synced = 0;
+    let failed = 0;
+
+    for (const localNote of localNotes) {
+        try {
+            // Create note on server
+            const result = await notesApi.create({
+                title: localNote.title,
+                content_blob: localNote.content_blob,
+                folder_id: localNote.folder_id || undefined,
+            });
+
+            if (result.error || !result.data) {
+                console.error(`[Sync] Failed to sync local note ${localNote.id}:`, result.error);
+                failed++;
+                continue;
+            }
+
+            // Replace local note with server note
+            const serverId = result.data.id;
+            appState.notes = appState.notes.map(n =>
+                n.id === localNote.id
+                    ? { ...n, id: serverId }
+                    : n
+            );
+
+            // Update any open tabs referencing this note
+            appState.openTabs = appState.openTabs.map(t =>
+                t.noteId === localNote.id
+                    ? { ...t, noteId: serverId }
+                    : t
+            );
+
+            // Update active note ID if needed
+            if (appState.activeNoteId === localNote.id) {
+                appState.activeNoteId = serverId;
+            }
+
+            console.log(`[Sync] Synced local note ${localNote.id} -> ${serverId}`);
+            synced++;
+        } catch (e) {
+            console.error(`[Sync] Error syncing local note ${localNote.id}:`, e);
+            failed++;
+        }
+    }
+
+    console.log(`[Sync] Sync complete: ${synced} synced, ${failed} failed`);
+    return { synced, failed };
 }
