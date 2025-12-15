@@ -209,6 +209,28 @@ $effect.root(() => {
 
         localStorage.setItem(STORAGE_KEY, JSON.stringify(toStore));
     });
+
+    // Sync settings to server when preferences change
+    $effect(() => {
+        if (!browser) return;
+
+        // Watch for settings changes (theme, accent color, font size, etc.)
+        const settingsSnapshot = JSON.stringify({
+            theme: appState.theme,
+            darkModeIntensity: appState.darkModeIntensity,
+            accentColor: appState.accentColor,
+            editorFontSize: appState.editorFontSize,
+            verticalTabsEnabled: appState.verticalTabsEnabled
+        });
+
+        // Trigger server sync (debounced in saveSettings)
+        // Dynamic import to avoid circular dependency
+        import('./sync').then(({ saveSettings }) => {
+            saveSettings();
+        }).catch(() => {
+            // Ignore import errors during initial load
+        });
+    });
 });
 
 // Actions

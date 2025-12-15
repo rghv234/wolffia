@@ -198,3 +198,23 @@ export function createEventSource(onMessage: (event: MessageEvent) => void): Eve
 
     return eventSource;
 }
+
+// Settings types
+export interface UserSettings {
+    theme: 'light' | 'dark' | 'system';
+    darkModeIntensity: 'normal' | 'dim' | 'oled';
+    accentColor: string;
+    editorFontSize: number;
+    verticalTabsEnabled: boolean;
+}
+
+// Settings API
+export const settings = {
+    async get() {
+        return request<UserSettings>('GET', '/settings');
+    },
+
+    async update(data: Partial<UserSettings>) {
+        return request<UserSettings>('PUT', '/settings', data);
+    }
+};

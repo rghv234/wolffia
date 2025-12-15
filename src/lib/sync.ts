@@ -4,7 +4,7 @@
  */
 
 import { appState, validatePersistedState, type Note, type Folder } from './stores/app.svelte';
-import { notes as notesApi, folders as foldersApi } from './api';
+import { notes as notesApi, folders as foldersApi, settings as settingsApi } from './api';
 import { decryptContent, encryptContent } from './crypto';
 
 // SSE Event Types
@@ -245,6 +245,9 @@ export async function loadAllData() {
         // Validate tabs and clean up stale references
         validatePersistedState();
         console.log('[Sync] Validated state - tabs:', appState.openTabs.length);
+
+        // Load user settings from server (theme, accent color, etc.)
+        await loadSettings();
 
         setOfflineMode(false);
         console.log('[Sync] Data loaded from server successfully');
@@ -529,4 +532,64 @@ export async function syncLocalNotesToServer(): Promise<{ synced: number; failed
 
     console.log(`[Sync] Sync complete: ${synced} synced, ${failed} failed`);
     return { synced, failed };
+}
+
+/**
+ * Load user settings from server
+ */
+export async function loadSettings(): Promise<void> {
+    if (!appState.token || appState.token === 'offline_session') {
+        console.log('[Sync] Skipping settings load - not authenticated');
+        return;
+    }
+
+    try {
+        const result = await settingsApi.get();
+        if (result.data) {
+            console.log('[Sync] Loaded settings from server:', result.data);
+            appState.theme = result.data.theme;
+            appState.darkModeIntensity = result.data.darkModeIntensity;
+            appState.accentColor = result.data.accentColor;
+            appState.editorFontSize = result.data.editorFontSize;
+            appState.verticalTabsEnabled = result.data.verticalTabsEnabled;
+        }
+    } catch (e) {
+        console.warn('[Sync] Failed to load settings:', e);
+    }
+}
+
+// Debounce timer for settings save
+let settingsSaveTimer: ReturnType<typeof setTimeout> | null = null;
+const SETTINGS_DEBOUNCE_MS = 1000;
+
+/**
+ * Save user settings to server (debounced)
+ */
+export function saveSettings(): void {
+    if (!appState.token || appState.token === 'offline_session') {
+        return; // Don't sync settings when not logged in
+    }
+
+    // Clear existing timer
+    if (settingsSaveTimer) {
+        clearTimeout(settingsSaveTimer);
+    }
+
+    // Debounce the save
+    settingsSaveTimer = setTimeout(async () => {
+        try {
+            const result = await settingsApi.update({
+                theme: appState.theme,
+                darkModeIntensity: appState.darkModeIntensity,
+                accentColor: appState.accentColor,
+                editorFontSize: appState.editorFontSize,
+                verticalTabsEnabled: appState.verticalTabsEnabled
+            });
+            if (result.data) {
+                console.log('[Sync] Settings saved to server');
+            }
+        } catch (e) {
+            console.warn('[Sync] Failed to save settings:', e);
+        }
+    }, SETTINGS_DEBOUNCE_MS);
 }

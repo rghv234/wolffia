@@ -550,4 +550,34 @@ app:match("recovery_status", "/auth/recovery/status", respond_to({
     end
 }))
 
+-- ============================================================
+-- User Settings Endpoints (for cross-device sync)
+-- ============================================================
+local UserSettings = require("models.user_settings")
+
+app:match("get_settings", "/settings", respond_to({
+    GET = function(self)
+        local auth_err = require_auth(self)
+        if auth_err then return auth_err end
+        
+        local settings = UserSettings:get_or_create(self.current_user.id)
+        return json_response(self, UserSettings:to_json(settings))
+    end,
+    
+    PUT = json_params(function(self)
+        local auth_err = require_auth(self)
+        if auth_err then return auth_err end
+        
+        local settings = UserSettings:update_for_user(self.current_user.id, {
+            theme = self.params.theme,
+            dark_mode_intensity = self.params.darkModeIntensity,
+            accent_color = self.params.accentColor,
+            editor_font_size = self.params.editorFontSize,
+            vertical_tabs_enabled = self.params.verticalTabsEnabled
+        })
+        
+        return json_response(self, UserSettings:to_json(settings))
+    end)
+}))
+
 return app
