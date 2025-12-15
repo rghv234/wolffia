@@ -225,7 +225,7 @@ $effect.root(() => {
 
         // Trigger server sync (debounced in saveSettings)
         // Dynamic import to avoid circular dependency
-        import('./sync').then(({ saveSettings }) => {
+        import('$lib/sync').then(({ saveSettings }) => {
             saveSettings();
         }).catch(() => {
             // Ignore import errors during initial load
