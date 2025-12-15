@@ -238,13 +238,14 @@ export function openNote(note: Note) {
     const existingTab = appState.openTabs.find(t => t.noteId === note.id);
 
     if (!existingTab) {
-        appState.openTabs.push({
+        // Use spread for Svelte 5 reactivity
+        appState.openTabs = [...appState.openTabs, {
             noteId: note.id,
             title: note.title,
             isDirty: false,
             cursorPosition: 0,
             scrollTop: 0
-        });
+        }];
     }
 
     appState.activeNoteId = note.id;
@@ -415,14 +416,14 @@ export function createUntitledNote(): string {
         scrollTop: 0
     };
 
-    // Add new tab for this untitled note
-    appState.openTabs.push({
+    // Add new tab for this untitled note (spread for Svelte 5 reactivity)
+    appState.openTabs = [...appState.openTabs, {
         noteId: untitledId,
         title,
         isDirty: false,
         cursorPosition: 0,
         scrollTop: 0
-    });
+    }];
 
     // Make it the active note
     appState.activeNoteId = untitledId;

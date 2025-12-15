@@ -28,7 +28,7 @@ const MAX_RECONNECT_ATTEMPTS = 5;
 const RECONNECT_DELAY = 3000;
 
 // Debounce timers for save operations
-const saveTimers = new Map<number, ReturnType<typeof setTimeout>>();
+const saveTimers = new Map<number | string, ReturnType<typeof setTimeout>>();
 const DEBOUNCE_MS = 500;
 
 /**
@@ -108,10 +108,10 @@ export function disconnectSync() {
 async function handleSyncEvent(event: SyncEvent) {
     switch (event.type) {
         case 'note_created':
-            // New note from server - just add it
+            // New note from server - just add it (spread for Svelte 5 reactivity)
             const existingNote = appState.notes.find(n => n.id === event.data.id);
             if (!existingNote) {
-                appState.notes.push(event.data as unknown as Note);
+                appState.notes = [...appState.notes, event.data as unknown as Note];
             }
             break;
 
@@ -136,8 +136,8 @@ async function handleSyncEvent(event: SyncEvent) {
                 // Apply server version
                 Object.assign(appState.notes[noteIndex], serverNote);
             } else {
-                // Note doesn't exist locally, add it
-                appState.notes.push(event.data as unknown as Note);
+                // Note doesn't exist locally, add it (spread for Svelte 5 reactivity)
+                appState.notes = [...appState.notes, event.data as unknown as Note];
             }
             break;
 
@@ -152,7 +152,8 @@ async function handleSyncEvent(event: SyncEvent) {
             if (folderIndex >= 0) {
                 Object.assign(appState.folders[folderIndex], event.data);
             } else {
-                appState.folders.push(event.data as unknown as Folder);
+                // Add new folder (spread for Svelte 5 reactivity)
+                appState.folders = [...appState.folders, event.data as unknown as Folder];
             }
             break;
 
@@ -182,14 +183,14 @@ async function createConflictCopy(localNote: Note) {
         });
 
         if (result.data) {
-            // Add to local state
-            appState.notes.push({
+            // Add to local state (spread for Svelte 5 reactivity)
+            appState.notes = [...appState.notes, {
                 id: result.data.id,
                 folder_id: localNote.folder_id,
                 title: conflictTitle,
                 content_blob: localNote.content_blob,
                 updated_at: now.toISOString(),
-            });
+            }];
 
             console.log('[Sync] Created conflict copy:', conflictTitle);
         }
@@ -274,7 +275,7 @@ export async function loadAllData() {
  * Save note with debouncing and optimistic update
  */
 export async function saveNote(
-    noteId: number,
+    noteId: number | string,
     content: string,
     title?: string
 ): Promise<boolean> {
@@ -302,18 +303,23 @@ export async function saveNote(
                     }
                 }
 
-                // Send to server
-                const result = await notesApi.update(noteId, {
-                    content_blob: encrypted,
-                    ...(title && { title })
-                });
+                // Send to server (only for server notes with numeric IDs)
+                if (typeof noteId === 'number') {
+                    const result = await notesApi.update(noteId, {
+                        content_blob: encrypted,
+                        ...(title && { title })
+                    });
 
-                if (result.error) {
-                    console.error('Failed to save note:', result.error);
-                    // Revert optimistic update on failure
-                    await loadAllData();
-                    resolve(false);
+                    if (result.error) {
+                        console.error('Failed to save note:', result.error);
+                        // Revert optimistic update on failure
+                        await loadAllData();
+                        resolve(false);
+                    } else {
+                        resolve(true);
+                    }
                 } else {
+                    // Local note - already saved to state, just resolve
                     resolve(true);
                 }
             } catch (e) {
@@ -345,7 +351,8 @@ export async function createNote(
             updated_at: new Date().toISOString()
         };
 
-        appState.notes.unshift(tempNote);
+        // Add temp note with spread for Svelte 5 reactivity
+        appState.notes = [tempNote, ...appState.notes];
 
         // Send to server
         const result = await notesApi.create({
@@ -417,7 +424,8 @@ export async function createFolder(
             rank: 0
         };
 
-        appState.folders.push(tempFolder);
+        // Add temp folder with spread for Svelte 5 reactivity
+        appState.folders = [...appState.folders, tempFolder];
 
         const result = await foldersApi.create({ name, parent_id: parentId || undefined, color });
 
@@ -460,9 +468,9 @@ export async function deleteFolder(folderId: number): Promise<boolean> {
     if (result.error) {
         console.error('[Sync] Delete folder API error:', result.error);
         if (backup) {
-            appState.folders.push(backup);
+            appState.folders = [...appState.folders, backup];
         }
-        appState.notes.push(...notesBackup);
+        appState.notes = [...appState.notes, ...notesBackup];
         return false;
     }
 

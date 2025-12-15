@@ -341,16 +341,20 @@
                     content_blob: contentBlob,
                     updated_at: new Date().toISOString(),
                 };
-                appState.notes.unshift(newNote);
+                // Add to local state with spread for Svelte 5 reactivity
+                appState.notes = [newNote, ...appState.notes];
 
-                // Open the saved note
-                appState.openTabs.push({
-                    noteId: newNote.id,
-                    title: newNote.title,
-                    isDirty: false,
-                    cursorPosition: 0,
-                    scrollTop: 0,
-                });
+                // Open the saved note (spread for Svelte 5 reactivity)
+                appState.openTabs = [
+                    ...appState.openTabs,
+                    {
+                        noteId: newNote.id,
+                        title: newNote.title,
+                        isDirty: false,
+                        cursorPosition: 0,
+                        scrollTop: 0,
+                    },
+                ];
                 appState.activeNoteId = newNote.id;
 
                 // Close the untitled/scratchpad tab that was just saved

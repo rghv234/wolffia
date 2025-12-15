@@ -59,15 +59,15 @@ export async function importFiles(
             } else {
                 success++;
 
-                // Add to local state
+                // Add to local state with spread for Svelte 5 reactivity
                 if (result.data) {
-                    appState.notes.unshift({
+                    appState.notes = [{
                         id: result.data.id,
                         folder_id: folderId ?? null,
                         title,
                         content_blob: contentToStore,
                         updated_at: new Date().toISOString()
-                    });
+                    }, ...appState.notes];
                 }
             }
         } catch (e) {
@@ -242,15 +242,15 @@ export async function importEncryptedBackup(
             if (result.data?.id) {
                 folderIdMap.set(folder.id, result.data.id);
 
-                // Add to appState for immediate sidebar visibility
-                appState.folders.push({
+                // Add to appState with spread for Svelte 5 reactivity
+                appState.folders = [...appState.folders, {
                     id: result.data.id,
                     parent_id: folder.parent_id ? folderIdMap.get(folder.parent_id) ?? null : null,
                     name: folder.name,
                     icon: folder.icon,
                     color: folder.color,
                     rank: appState.folders.length
-                });
+                }];
 
                 success++;
             } else {
@@ -277,14 +277,14 @@ export async function importEncryptedBackup(
             });
 
             if (result.data?.id) {
-                // Add to appState for immediate sidebar visibility
-                appState.notes.unshift({
+                // Add to appState with spread for Svelte 5 reactivity
+                appState.notes = [{
                     id: result.data.id,
                     folder_id: note.folder_id ? folderIdMap.get(note.folder_id) ?? null : null,
                     title: note.title,
                     content_blob: note.content_blob,
                     updated_at: new Date().toISOString()
-                });
+                }, ...appState.notes];
                 success++;
             } else {
                 console.error(`[Import] Failed to create note "${note.title}":`, result.error);
