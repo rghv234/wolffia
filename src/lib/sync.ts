@@ -551,6 +551,12 @@ export async function loadSettings(): Promise<void> {
         return;
     }
 
+    // Check if theme sync is enabled
+    if (!appState.syncThemes) {
+        console.log('[Sync] Theme sync disabled - skipping settings load');
+        return;
+    }
+
     try {
         const result = await settingsApi.get();
         if (result.data) {
@@ -576,6 +582,11 @@ const SETTINGS_DEBOUNCE_MS = 1000;
 export function saveSettings(): void {
     if (!appState.token || appState.token === 'offline_session') {
         return; // Don't sync settings when not logged in
+    }
+
+    // Check if theme sync is enabled
+    if (!appState.syncThemes) {
+        return; // User has disabled theme sync
     }
 
     // Clear existing timer

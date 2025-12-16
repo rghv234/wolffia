@@ -204,10 +204,13 @@
         await foldersApi.delete(folder.id);
       }
 
-      // Delete all notes (including unfiled ones)
+      // Delete all notes (including unfiled ones) - only server notes
       for (const note of appState.notes) {
         console.log("[Settings] Deleting note:", note.id);
-        await notesApi.delete(note.id);
+        // Only call API for server notes (numeric IDs)
+        if (typeof note.id === "number") {
+          await notesApi.delete(note.id);
+        }
       }
 
       // Clear local state
@@ -385,6 +388,23 @@
               placeholder="#000000"
             />
           </div>
+        </div>
+
+        <!-- Sync Theme Across Devices -->
+        <div class="form-control">
+          <label class="label cursor-pointer" for="syncThemes">
+            <span class="label-text">Sync Theme Across Devices</span>
+            <input
+              id="syncThemes"
+              type="checkbox"
+              class="toggle toggle-primary"
+              checked={appState.syncThemes}
+              onchange={() => (appState.syncThemes = !appState.syncThemes)}
+            />
+          </label>
+          <span class="label-text-alt text-base-content/60 pl-1">
+            When enabled, theme settings sync to your account
+          </span>
         </div>
 
         <!-- Sidebar Visible -->

@@ -48,7 +48,7 @@
     } | null>(null);
 
     // Drag and drop state
-    let draggedNoteId = $state<number | null>(null);
+    let draggedNoteId = $state<number | string | null>(null);
     let dragOverFolderId = $state<number | null>(null);
 
     // Rename/Delete modal state
@@ -78,9 +78,12 @@
     async function confirmRename() {
         if (pendingNote && newNoteName.trim()) {
             try {
-                await notesApi.update(pendingNote.id, {
-                    title: newNoteName.trim(),
-                });
+                // Only call API for server notes (numeric IDs)
+                if (typeof pendingNote.id === "number") {
+                    await notesApi.update(pendingNote.id, {
+                        title: newNoteName.trim(),
+                    });
+                }
                 const noteIndex = appState.notes.findIndex(
                     (n) => n.id === pendingNote!.id,
                 );
@@ -100,17 +103,27 @@
         if (pendingNote) {
             try {
                 console.log("[Sidebar] Deleting note:", pendingNote.id);
-                const result = await notesApi.delete(pendingNote.id);
-                console.log("[Sidebar] Delete result:", result);
+                const deletedNoteId = pendingNote!.id;
 
-                if (result.error) {
-                    console.error("[Sidebar] Delete API error:", result.error);
-                    alert("Failed to delete note: " + result.error);
-                    return;
+                // Only call API for server notes (numeric IDs)
+                if (typeof deletedNoteId === "number") {
+                    const result = await notesApi.delete(deletedNoteId);
+                    console.log("[Sidebar] Delete result:", result);
+
+                    if (result.error) {
+                        console.error(
+                            "[Sidebar] Delete API error:",
+                            result.error,
+                        );
+                        alert("Failed to delete note: " + result.error);
+                        return;
+                    }
+                } else {
+                    // Local note (string ID like 'local-xxx') - just remove from state
+                    console.log("[Sidebar] Deleting local note (no API call)");
                 }
 
                 // Use filter instead of splice for proper Svelte 5 reactivity
-                const deletedNoteId = pendingNote!.id;
                 appState.notes = appState.notes.filter(
                     (n) => n.id !== deletedNoteId,
                 );
@@ -150,7 +163,7 @@
     }
 
     // Drag handlers
-    function handleNoteDragStart(e: DragEvent, noteId: number) {
+    function handleNoteDragStart(e: DragEvent, noteId: number | string) {
         draggedNoteId = noteId;
         if (e.dataTransfer) {
             e.dataTransfer.effectAllowed = "move";
@@ -312,10 +325,15 @@
         contextMenu = null;
     }
 
-    async function moveNoteToFolder(noteId: number, folderId: number | null) {
-        // Update note's folder_id (convert null to undefined for API)
-        await notesApi.update(noteId, { folder_id: folderId ?? undefined });
-        // Reload data
+    async function moveNoteToFolder(
+        noteId: number | string,
+        folderId: number | null,
+    ) {
+        // Only call API for server notes (numeric IDs)
+        if (typeof noteId === "number") {
+            await notesApi.update(noteId, { folder_id: folderId ?? undefined });
+        }
+        // Update local state
         const noteIndex = appState.notes.findIndex((n) => n.id === noteId);
         if (noteIndex >= 0) {
             appState.notes[noteIndex].folder_id = folderId;
@@ -467,7 +485,11 @@
                     <!-- Child folders -->
                     {#each children as child (child.id)}
                         <div
+                            role="button"
+                            tabindex="0"
                             class="py-1 px-3 flex items-center gap-2 hover:bg-base-300 rounded-lg cursor-pointer"
+                            ondblclick={(e) =>
+                                handleFolderContextMenu(e, child)}
                             oncontextmenu={(e) =>
                                 handleFolderContextMenu(e, child)}
                         >
@@ -489,6 +511,7 @@
                                 ? 'opacity-50'
                                 : ''}"
                             onclick={() => openNote(note)}
+                            ondblclick={(e) => handleNoteContextMenu(e, note)}
                             oncontextmenu={(e) =>
                                 handleNoteContextMenu(e, note)}
                             ontouchstart={(e) =>

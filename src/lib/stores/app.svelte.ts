@@ -74,6 +74,7 @@ interface AppState {
     sidebarVisible: boolean;
     statusBarVisible: boolean;
     accentColor: string; // Hex color for primary accent
+    syncThemes: boolean; // Whether to sync theme settings between devices
 
     // Vertical Tabs Mode
     verticalTabsEnabled: boolean;
@@ -158,6 +159,7 @@ function createInitialState(): AppState {
         sidebarVisible: persisted.sidebarVisible ?? true,
         statusBarVisible: persisted.statusBarVisible ?? true,
         accentColor: persisted.accentColor ?? '#ec4899', // Default pink
+        syncThemes: persisted.syncThemes ?? true, // Default to syncing themes
 
         // Vertical Tabs Mode (persisted)
         verticalTabsEnabled: persisted.verticalTabsEnabled ?? false,
