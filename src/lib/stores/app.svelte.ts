@@ -301,18 +301,27 @@ export function setTheme(theme: 'light' | 'dark' | 'system') {
 
     if (browser) {
         const html = document.documentElement;
+        let isDark = false;
 
         // Map our theme values to daisyUI theme names
         if (theme === 'system') {
-            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            html.dataset.theme = prefersDark ? 'dracula' : 'emerald';
+            isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            html.dataset.theme = isDark ? 'dracula' : 'emerald';
             localStorage.setItem('wolffia_theme', 'system');
         } else if (theme === 'light') {
+            isDark = false;
             html.dataset.theme = 'emerald';
             localStorage.setItem('wolffia_theme', 'emerald');
         } else {
+            isDark = true;
             html.dataset.theme = 'dracula';
             localStorage.setItem('wolffia_theme', 'dracula');
+        }
+
+        // Update PWA theme-color meta tag for titlebar
+        const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+        if (themeColorMeta) {
+            themeColorMeta.setAttribute('content', isDark ? '#1f2937' : '#f3f4f6');
         }
     }
 }
