@@ -200,7 +200,8 @@
     // Computed: Build folder tree
     let folderTree = $derived.by(() => {
         const folders = Array.isArray(appState.folders) ? appState.folders : [];
-        const rootFolders = folders.filter((f) => f.parent_id === null);
+        // Use falsy check (null, undefined, 0) not strict null - Lapis returns nil as undefined
+        const rootFolders = folders.filter((f) => !f.parent_id);
         return rootFolders.sort(
             (a, b) => a.rank - b.rank || a.name.localeCompare(b.name),
         );
@@ -209,8 +210,9 @@
     // Computed: Root-level notes (no folder)
     let rootNotes = $derived.by(() => {
         const notes = Array.isArray(appState.notes) ? appState.notes : [];
+        // Use falsy check (null, undefined, 0) not strict null - Lapis returns nil as undefined
         return notes
-            .filter((n) => n.folder_id === null)
+            .filter((n) => !n.folder_id)
             .sort(
                 (a, b) =>
                     new Date(b.updated_at).getTime() -
