@@ -462,7 +462,21 @@
               You're using Wolffia offline. Sign in to sync your notes across
               devices.
             </p>
-            <a href="/auth" class="btn btn-primary btn-sm gap-2">
+            <button
+              type="button"
+              class="btn btn-primary btn-sm gap-2"
+              onclick={() => {
+                // Close the settings modal
+                dialogEl?.close();
+                // Close the sidebar drawer on mobile
+                const drawer = document.getElementById(
+                  "main-drawer",
+                ) as HTMLInputElement;
+                if (drawer) drawer.checked = false;
+                // Navigate to auth page
+                window.location.href = "/auth";
+              }}
+            >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="16"
@@ -479,7 +493,7 @@
                 <line x1="15" y1="12" x2="3" y2="12"></line>
               </svg>
               Sign In
-            </a>
+            </button>
           </div>
         {/if}
 
