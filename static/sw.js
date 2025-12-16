@@ -10,13 +10,13 @@ const CACHE_NAME = `wolffia-${CACHE_VERSION}`;
 // App shell files to cache (Cache-First)
 const APP_SHELL = [
     '/',
-    '/index.html',
     '/manifest.json'
 ];
 
-// Cache-First for app shell, Network-First for API
+// Cache-First for app shell and static assets (including SvelteKit chunks)
 const CACHE_FIRST_PATTERNS = [
     /\.(js|css|woff2?|png|jpg|jpeg|svg|ico)$/,
+    /^\/_app\//,  // SvelteKit app chunks
     /^\/$/,
     /\/index\.html$/
 ];
@@ -72,9 +72,16 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // Cache-First for static assets
+    // Cache-First for static assets (including SvelteKit _app chunks)
     if (CACHE_FIRST_PATTERNS.some((pattern) => pattern.test(url.pathname))) {
         event.respondWith(cacheFirst(event.request));
+        return;
+    }
+
+    // For navigation requests (HTML pages), use stale-while-revalidate
+    // and fall back to cached root if completely offline
+    if (event.request.mode === 'navigate') {
+        event.respondWith(handleNavigation(event.request));
         return;
     }
 
@@ -141,6 +148,43 @@ async function staleWhileRevalidate(request) {
     });
 
     return cached || networkPromise;
+}
+
+/**
+ * Handle navigation requests (HTML pages)
+ * Falls back to cached root if completely offline
+ */
+async function handleNavigation(request) {
+    try {
+        // Try network first for navigation
+        const response = await fetch(request);
+        if (response.ok) {
+            const cache = await caches.open(CACHE_NAME);
+            cache.put(request, response.clone());
+        }
+        return response;
+    } catch (error) {
+        // Network failed - try cache
+        const cached = await caches.match(request);
+        if (cached) {
+            return cached;
+        }
+
+        // Fall back to root page (SPA can route from there)
+        const rootCached = await caches.match('/');
+        if (rootCached) {
+            return rootCached;
+        }
+
+        // Last resort - offline message
+        return new Response(
+            '<html><body><h1>Offline</h1><p>Please reconnect to the internet.</p></body></html>',
+            {
+                status: 503,
+                headers: { 'Content-Type': 'text/html' }
+            }
+        );
+    }
 }
 
 // Handle push notifications

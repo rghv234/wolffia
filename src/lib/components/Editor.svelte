@@ -181,6 +181,15 @@
     async function saveContent() {
         if (isSaving) return;
 
+        console.log("[Editor] saveContent called:", {
+            noteId,
+            noteIdType: typeof noteId,
+            isUntitled,
+            isScratchpad,
+            hasNote: !!note,
+            noteObj: note,
+        });
+
         isSaving = true;
         try {
             if (isUntitled && typeof noteId === "string") {
@@ -194,6 +203,10 @@
                 updateScratchpad({ content });
                 lastSaved = new Date();
             } else if (note) {
+                console.log(
+                    "[Editor] Calling saveNote for existing note:",
+                    note.id,
+                );
                 const success = await saveNote(note.id, content, note.title);
                 if (success) {
                     lastSaved = new Date();
