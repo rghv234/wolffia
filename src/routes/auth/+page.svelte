@@ -22,7 +22,11 @@
         generateRecoveryCodes,
     } from "$lib/crypto";
     import { appState } from "$lib/stores/app.svelte";
-    import { syncLocalNotesToServer } from "$lib/sync";
+    import {
+        syncLocalNotesToServer,
+        loadAllData,
+        connectSync,
+    } from "$lib/sync";
     import RecoveryCodesModal from "$lib/components/RecoveryCodesModal.svelte";
 
     // State
@@ -161,6 +165,18 @@
             } catch (syncError) {
                 console.warn("[Auth] Failed to sync local notes:", syncError);
                 // Don't block login on sync failure
+            }
+
+            // Load user data BEFORE navigating to prevent glitchy home screen
+            try {
+                await loadAllData();
+                connectSync();
+            } catch (loadError) {
+                console.warn(
+                    "[Auth] Failed to load data after login:",
+                    loadError,
+                );
+                // Still navigate - app can work offline
             }
 
             // Navigate to app

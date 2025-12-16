@@ -22,7 +22,7 @@
     enableSplitView,
     disableSplitView,
   } from "$lib/stores/app.svelte";
-  import { loadAllData, connectSync } from "$lib/sync";
+  import { loadAllData, connectSync, syncPendingNotes } from "$lib/sync";
   import { initKeyboardShortcuts } from "$lib/shortcuts";
 
   let { children } = $props();
@@ -65,6 +65,16 @@
           console.error("[PWA] Service Worker registration failed:", error);
         });
     }
+
+    // Sync pending notes when coming back online
+    const handleOnline = () => {
+      console.log("[PWA] Back online - syncing pending notes");
+      syncPendingNotes();
+      // Also try to reconnect SSE
+      loadAllData();
+      connectSync();
+    };
+    window.addEventListener("online", handleOnline);
 
     // Apply saved theme on mount (important for auth page)
     const savedTheme = localStorage.getItem("wolffia_theme") as

@@ -890,7 +890,7 @@
                 <ChevronDown size={12} />
             </div>
             <ul
-                tabindex="0"
+                role="menu"
                 class="dropdown-content menu bg-base-200 rounded-box z-10 w-36 shadow-lg p-2"
             >
                 <li>
@@ -1206,10 +1206,11 @@
 
         <div class="space-y-4">
             <div class="form-control">
-                <label class="label">
+                <label class="label" for="link-text-input">
                     <span class="label-text">Text</span>
                 </label>
                 <input
+                    id="link-text-input"
                     type="text"
                     class="input input-bordered w-full"
                     placeholder="Link text"
@@ -1218,10 +1219,11 @@
             </div>
 
             <div class="form-control">
-                <label class="label">
+                <label class="label" for="link-url-input">
                     <span class="label-text">URL</span>
                 </label>
                 <input
+                    id="link-url-input"
                     type="url"
                     class="input input-bordered w-full"
                     placeholder="https://"
@@ -1266,10 +1268,8 @@
 
         <!-- Format Selection (hidden on mobile since speed-dial handles it) -->
         <div class="form-control hidden lg:block">
-            <label class="label">
-                <span class="label-text">File Format</span>
-            </label>
-            <div class="flex gap-4">
+            <span class="label-text">File Format</span>
+            <div class="flex gap-4 mt-1">
                 <label class="label cursor-pointer gap-2">
                     <input
                         type="radio"

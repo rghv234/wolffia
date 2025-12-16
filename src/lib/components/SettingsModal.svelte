@@ -309,9 +309,7 @@
         <!-- Dark Mode Intensity (show when effectively in dark mode) -->
         {#if isEffectivelyDark}
           <div class="form-control">
-            <label class="label">
-              <span class="label-text">Dark Mode Intensity</span>
-            </label>
+            <span class="label-text mb-2">Dark Mode Intensity</span>
             <div class="flex flex-wrap gap-4">
               <label class="cursor-pointer flex items-center gap-2">
                 <input
@@ -344,11 +342,9 @@
                 <span class="label-text">OLED Black</span>
               </label>
             </div>
-            <label class="label">
-              <span class="label-text-alt text-base-content/60">
-                OLED uses pure black for battery savings
-              </span>
-            </label>
+            <span class="label-text-alt text-base-content/60">
+              OLED uses pure black for battery savings
+            </span>
           </div>
         {/if}
         <div class="form-control">
@@ -367,6 +363,7 @@
                   ? 'ring-2 ring-offset-2 ring-primary scale-110'
                   : 'border-transparent'}"
                 style="background-color: {color}"
+                aria-label="Set accent color to {color}"
                 onclick={() => setAccentColor(color)}
               >
               </button>
@@ -494,9 +491,7 @@
 
         <!-- Recovery Codes -->
         <div class="form-control">
-          <label class="label">
-            <span class="label-text">Recovery Codes</span>
-          </label>
+          <span class="label-text mb-2">Recovery Codes</span>
           <p class="text-sm text-base-content/70 mb-2">
             Recovery codes can help you regain access if you forget your
             password.

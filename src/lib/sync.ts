@@ -305,29 +305,79 @@ export async function saveNote(
 
                 // Send to server (only for server notes with numeric IDs)
                 if (typeof noteId === 'number') {
-                    const result = await notesApi.update(noteId, {
-                        content_blob: encrypted,
-                        ...(title && { title })
-                    });
-
-                    if (result.error) {
-                        console.error('Failed to save note:', result.error);
-                        // Revert optimistic update on failure
-                        await loadAllData();
-                        resolve(false);
-                    } else {
-                        resolve(true);
+                    try {
+                        const result = await notesApi.update(noteId, {
+                            content_blob: encrypted,
+                            ...(title && { title })
+                        });
+                        if (result.error) {
+                            console.warn('[Sync] Failed to save to server (offline?):', result.error);
+                            // DON'T revert - keep local changes, they'll sync when back online
+                            // Mark this note as pending sync
+                            markNoteForSync(noteId);
+                        }
+                    } catch (e) {
+                        console.warn('[Sync] Network error saving note (offline?):', e);
+                        // Keep local changes, queue for sync
+                        markNoteForSync(noteId);
                     }
-                } else {
-                    // Local note - already saved to state, just resolve
-                    resolve(true);
                 }
+
+                // Always resolve true - local save succeeded even if server failed
+                resolve(true);
             } catch (e) {
                 console.error('Save error:', e);
                 resolve(false);
             }
         }, DEBOUNCE_MS));
     });
+}
+
+// Notes pending sync when back online
+const pendingSyncNotes = new Set<number>();
+
+function markNoteForSync(noteId: number) {
+    pendingSyncNotes.add(noteId);
+    // Store in localStorage for persistence across reloads
+    localStorage.setItem('wolffia_pending_sync', JSON.stringify([...pendingSyncNotes]));
+    console.log('[Sync] Note marked for sync when online:', noteId);
+}
+
+// Sync pending notes when back online
+export async function syncPendingNotes() {
+    const stored = localStorage.getItem('wolffia_pending_sync');
+    if (stored) {
+        try {
+            const ids = JSON.parse(stored) as number[];
+            ids.forEach(id => pendingSyncNotes.add(id));
+        } catch (e) {
+            // Ignore parse errors
+        }
+    }
+
+    if (pendingSyncNotes.size === 0) return;
+
+    console.log('[Sync] Syncing pending notes:', [...pendingSyncNotes]);
+
+    for (const noteId of pendingSyncNotes) {
+        const note = appState.notes.find(n => n.id === noteId);
+        if (note) {
+            try {
+                const result = await notesApi.update(noteId, {
+                    content_blob: note.content_blob,
+                    title: note.title
+                });
+                if (!result.error) {
+                    pendingSyncNotes.delete(noteId);
+                    console.log('[Sync] Synced note:', noteId);
+                }
+            } catch (e) {
+                // Still offline, will retry later
+            }
+        }
+    }
+
+    localStorage.setItem('wolffia_pending_sync', JSON.stringify([...pendingSyncNotes]));
 }
 
 /**
