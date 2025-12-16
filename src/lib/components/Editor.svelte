@@ -999,30 +999,6 @@
         >
             <RemoveFormatting size={16} />
         </button>
-
-        <!-- Divider before Save -->
-        <div class="divider divider-horizontal mx-1 h-6"></div>
-
-        <!-- Unified Save button - works for all note types -->
-        <button
-            type="button"
-            class="hidden sm:flex btn btn-ghost btn-sm gap-1"
-            title="Save (Ctrl+S)"
-            onclick={() => {
-                if (isUntitled || isScratchpad) {
-                    openSaveModal();
-                } else {
-                    saveContent();
-                }
-            }}
-        >
-            <Save size={14} />
-            <span
-                >{tab?.isDirty ? "● " : ""}{isUntitled
-                    ? "Save As"
-                    : "Save"}</span
-            >
-        </button>
     </div>
 
     <!-- Find/Replace Bar -->
