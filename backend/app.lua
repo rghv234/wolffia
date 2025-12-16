@@ -309,6 +309,23 @@ app:match("folders_item", "/api/folders/:id", respond_to({
             return json_error(self, "Folder not found", 404)
         end
         
+        -- Cascade: Delete all notes in this folder
+        local notes_in_folder = Notes:select("WHERE folder_id = ? AND user_id = ?", folder.id, self.current_user.id)
+        for _, note in ipairs(notes_in_folder) do
+            note:delete()
+        end
+        
+        -- Also delete any child folders (recursive cascade)
+        local child_folders = Folders:select("WHERE parent_id = ? AND user_id = ?", folder.id, self.current_user.id)
+        for _, child in ipairs(child_folders) do
+            -- Delete notes in child folder
+            local child_notes = Notes:select("WHERE folder_id = ? AND user_id = ?", child.id, self.current_user.id)
+            for _, note in ipairs(child_notes) do
+                note:delete()
+            end
+            child:delete()
+        end
+        
         folder:delete()
         return json_response(self, { message = "Folder deleted" })
     end
