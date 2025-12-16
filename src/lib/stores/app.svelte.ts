@@ -393,7 +393,7 @@ export function setDarkModeIntensity(intensity: 'normal' | 'dim' | 'oled') {
     }
 }
 
-export function updateTabState(noteId: number, updates: Partial<Tab>) {
+export function updateTabState(noteId: number | string, updates: Partial<Tab>) {
     const tab = appState.openTabs.find(t => t.noteId === noteId);
     if (tab) {
         Object.assign(tab, updates);

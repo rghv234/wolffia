@@ -4,27 +4,31 @@
  * @ts-nocheck
  */
 
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';  // Bump version to force refresh
 const CACHE_NAME = `wolffia-${CACHE_VERSION}`;
 
-// App shell files to cache (Cache-First)
+// App shell files to cache on install
 const APP_SHELL = [
     '/',
-    '/manifest.json'
+    '/manifest.json',
+    '/favicon.svg'
 ];
 
-// Cache-First for app shell and static assets (including SvelteKit chunks)
+// Cache-First for static assets (including SvelteKit chunks)
+// These assets have hashed filenames so they're immutable
 const CACHE_FIRST_PATTERNS = [
-    /\.(js|css|woff2?|png|jpg|jpeg|svg|ico)$/,
-    /^\/_app\//,  // SvelteKit app chunks
-    /^\/$/,
-    /\/index\.html$/
+    /\.(js|css|woff2?|png|jpg|jpeg|svg|ico|webp)$/,
+    /^\/_app\//,       // SvelteKit app chunks (immutable)
+    /^\/$/,            // Root page
+    /\/favicon/        // Favicons
 ];
 
+// Network-First for dynamic/API content
 const NETWORK_FIRST_PATTERNS = [
     /\/api\//,
     /\/auth\//,
-    /\/events/
+    /\/events/,
+    /\/settings/
 ];
 
 // Install - cache app shell
