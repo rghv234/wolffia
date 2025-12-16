@@ -779,22 +779,6 @@
     <div
         class="toolbar flex items-center gap-1 px-4 py-2 border-b border-base-300 bg-base-200"
     >
-        <!-- Save button - shows when dirty or for unsaved notes -->
-        {#if tab?.isDirty || isUntitled}
-            <button
-                type="button"
-                class="btn btn-ghost btn-sm gap-1 {tab?.isDirty
-                    ? 'text-warning'
-                    : ''}"
-                title="Save (Ctrl+S)"
-                onclick={() => saveContent()}
-            >
-                <Save size={16} />
-                <span class="hidden sm:inline text-xs">Save</span>
-            </button>
-            <div class="divider divider-horizontal mx-0"></div>
-        {/if}
-
         <!-- Heading dropdown -->
         <div class="dropdown">
             <button
@@ -1016,20 +1000,29 @@
             <RemoveFormatting size={16} />
         </button>
 
-        {#if isScratchpad || isUntitled}
-            <div class="divider divider-horizontal mx-1 h-6"></div>
+        <!-- Divider before Save -->
+        <div class="divider divider-horizontal mx-1 h-6"></div>
 
-            <!-- Save To Notes button (desktop only - mobile/tablet uses FAB) -->
-            <button
-                type="button"
-                class="hidden lg:flex btn btn-primary btn-sm gap-1"
-                title="Save to Notes (Ctrl+S)"
-                onclick={() => openSaveModal()}
+        <!-- Unified Save button - works for all note types -->
+        <button
+            type="button"
+            class="hidden sm:flex btn btn-ghost btn-sm gap-1"
+            title="Save (Ctrl+S)"
+            onclick={() => {
+                if (isUntitled || isScratchpad) {
+                    openSaveModal();
+                } else {
+                    saveContent();
+                }
+            }}
+        >
+            <Save size={14} />
+            <span
+                >{tab?.isDirty ? "● " : ""}{isUntitled
+                    ? "Save As"
+                    : "Save"}</span
             >
-                <Save size={14} />
-                <span>Save</span>
-            </button>
-        {/if}
+        </button>
     </div>
 
     <!-- Find/Replace Bar -->
