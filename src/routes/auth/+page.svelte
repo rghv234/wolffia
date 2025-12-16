@@ -128,7 +128,7 @@
                 appState.username = username;
                 await setEncryptionKey(keyB);
 
-                goto("/");
+                window.location.href = "/";
                 return;
             }
 
@@ -179,8 +179,8 @@
                 // Still navigate - app can work offline
             }
 
-            // Navigate to app
-            goto("/");
+            // Navigate to app with full page reload to ensure proper initialization
+            window.location.href = "/";
         } catch (e) {
             error = e instanceof Error ? e.message : "Login failed";
         } finally {
