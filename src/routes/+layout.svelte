@@ -174,7 +174,7 @@
         console.warn("[Menu] Tauri event listener not available:", e);
       }
     } else {
-      console.log("[Menu] Not in Tauri context, skipping menu listener");
+      // Web browser context - no Tauri menu listener needed
     }
   }
 </script>
