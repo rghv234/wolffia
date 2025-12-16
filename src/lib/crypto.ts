@@ -85,11 +85,54 @@ export async function exportKeyAsBase64(key: CryptoKey): Promise<string> {
     return btoa(String.fromCharCode(...new Uint8Array(exported)));
 }
 
+const ENCRYPTED_KEY_STORAGE = 'wolffia_encryption_key';
+
 /**
- * Set the active encryption key
+ * Set the active encryption key and cache it for offline use
  */
-export function setEncryptionKey(key: CryptoKey) {
+export async function setEncryptionKey(key: CryptoKey): Promise<void> {
     encryptionKey = key;
+
+    // Export and cache the key for offline use
+    try {
+        const exported = await crypto.subtle.exportKey('raw', key);
+        const keyBase64 = btoa(String.fromCharCode(...new Uint8Array(exported)));
+        localStorage.setItem(ENCRYPTED_KEY_STORAGE, keyBase64);
+        console.log('[Crypto] Encryption key cached for offline use');
+    } catch (e) {
+        console.warn('[Crypto] Failed to cache encryption key:', e);
+    }
+}
+
+/**
+ * Restore encryption key from cache (call on page load)
+ */
+export async function restoreEncryptionKey(): Promise<boolean> {
+    if (encryptionKey) return true; // Already have key
+
+    const cached = localStorage.getItem(ENCRYPTED_KEY_STORAGE);
+    if (!cached) return false;
+
+    try {
+        // Convert Base64 back to raw key bytes
+        const keyBytes = Uint8Array.from(atob(cached), c => c.charCodeAt(0));
+
+        // Import as AES-GCM key
+        encryptionKey = await crypto.subtle.importKey(
+            'raw',
+            keyBytes,
+            { name: 'AES-GCM', length: 256 },
+            true,
+            ['encrypt', 'decrypt']
+        );
+
+        console.log('[Crypto] Encryption key restored from cache');
+        return true;
+    } catch (e) {
+        console.error('[Crypto] Failed to restore encryption key:', e);
+        localStorage.removeItem(ENCRYPTED_KEY_STORAGE);
+        return false;
+    }
 }
 
 /**
@@ -97,6 +140,7 @@ export function setEncryptionKey(key: CryptoKey) {
  */
 export function clearEncryptionKey() {
     encryptionKey = null;
+    localStorage.removeItem(ENCRYPTED_KEY_STORAGE);
 }
 
 /**

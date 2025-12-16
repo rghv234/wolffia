@@ -24,6 +24,7 @@
   } from "$lib/stores/app.svelte";
   import { loadAllData, connectSync, syncPendingNotes } from "$lib/sync";
   import { initKeyboardShortcuts } from "$lib/shortcuts";
+  import { restoreEncryptionKey } from "$lib/crypto";
 
   let { children } = $props();
 
@@ -137,6 +138,9 @@
       isInitialized = true;
       return;
     }
+
+    // Restore encryption key from cache (for offline use)
+    await restoreEncryptionKey();
 
     // Show UI immediately - app works offline-first without login
     isInitialized = true;
