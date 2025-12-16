@@ -310,6 +310,7 @@ export async function saveNote(
                             content_blob: encrypted,
                             ...(title && { title })
                         });
+
                         if (result.error) {
                             console.warn('[Sync] Failed to save to server (offline?):', result.error);
                             // DON'T revert - keep local changes, they'll sync when back online
