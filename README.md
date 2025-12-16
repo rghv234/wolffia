@@ -71,7 +71,7 @@ npm run dev
 
 Open `http://localhost:5173` — API runs at `http://localhost:3000`
 
-### <a id="desktop-app"></a>Desktop App
+### <a id="tauri-app"></a>Tauri App
 
 ```bash
 # Build for your platform
