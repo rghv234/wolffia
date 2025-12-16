@@ -48,12 +48,7 @@
 | 🎨 **Themeable** | Light/Dark/OLED modes with custom accent colors |
 | 💾 **Data Portability** | Export as Markdown or encrypted JSON backups |
 | 🖥️ **Cross-Platform** | Web, PWA, Windows, macOS, Linux via Tauri |
-| ⚡ **Lightweight** | Backend runs on just 64MB RAM |
-
-## <a id="screenshots"></a>Screenshots
-
-<!-- Add screenshots here -->
-*Coming soon*
+| ⚡ **Lightweight** | Backend runs on LuaJIT, giving very fast speeds for low resource usage. |
 
 ## <a id="quick-start"></a>Quick Start
 
@@ -76,7 +71,7 @@ npm run dev
 
 Open `http://localhost:5173` — API runs at `http://localhost:3000`
 
-### <a id="desktop-app"></a>Desktop App
+### <a id="tauri-app"></a>Tauri App
 
 ```bash
 # Build for your platform
