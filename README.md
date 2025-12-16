@@ -48,7 +48,7 @@
 | 🎨 **Themeable** | Light/Dark/OLED modes with custom accent colors |
 | 💾 **Data Portability** | Export as Markdown or encrypted JSON backups |
 | 🖥️ **Cross-Platform** | Web, PWA, Windows, macOS, Linux via Tauri |
-| ⚡ **Lightweight** | Backend runs on just 64MB RAM |
+| ⚡ **Lightweight** | Backend runs on LuaJIT, giving very fast speeds for low resource usage. |
 
 ## <a id="quick-start"></a>Quick Start
 
