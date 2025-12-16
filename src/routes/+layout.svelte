@@ -70,6 +70,15 @@
       document.documentElement.dataset.theme = prefersDark
         ? "dracula"
         : "emerald";
+
+      // Update PWA theme-color meta tag for titlebar
+      const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+      if (themeColorMeta) {
+        themeColorMeta.setAttribute(
+          "content",
+          prefersDark ? "#1f2937" : "#f3f4f6",
+        );
+      }
     }
 
     // Apply saved dark mode intensity (OLED, Dim, or Normal)
