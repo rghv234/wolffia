@@ -999,6 +999,29 @@
         >
             <RemoveFormatting size={16} />
         </button>
+
+        {#if isScratchpad || isUntitled || tab?.isDirty}
+            <div class="divider divider-horizontal mx-1 h-6"></div>
+
+            <!-- Universal Save button -->
+            <button
+                type="button"
+                class="hidden lg:flex btn {tab?.isDirty
+                    ? 'btn-warning'
+                    : 'btn-primary'} btn-sm gap-1"
+                title="Save (Ctrl+S)"
+                onclick={() => {
+                    if (isUntitled || isScratchpad) {
+                        openSaveModal();
+                    } else {
+                        saveContent();
+                    }
+                }}
+            >
+                <Save size={14} />
+                <span>{isUntitled || isScratchpad ? "Save As" : "Save"}</span>
+            </button>
+        {/if}
     </div>
 
     <!-- Find/Replace Bar -->
