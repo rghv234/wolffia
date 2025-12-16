@@ -50,11 +50,6 @@
 | 🖥️ **Cross-Platform** | Web, PWA, Windows, macOS, Linux via Tauri |
 | ⚡ **Lightweight** | Backend runs on just 64MB RAM |
 
-## <a id="screenshots"></a>Screenshots
-
-<!-- Add screenshots here -->
-*Coming soon*
-
 ## <a id="quick-start"></a>Quick Start
 
 ### <a id="web-self-hosted"></a>Web (Self-Hosted)
