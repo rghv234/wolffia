@@ -126,7 +126,7 @@
                 appState.token = "offline_session";
                 appState.userId = userId;
                 appState.username = username;
-                setEncryptionKey(keyB);
+                await setEncryptionKey(keyB);
 
                 goto("/");
                 return;
@@ -148,7 +148,7 @@
             appState.username = result.data!.user.username;
 
             // Set encryption key
-            setEncryptionKey(keyB);
+            await setEncryptionKey(keyB);
 
             // Cache credentials for offline login
             cacheCredentials({
