@@ -122,18 +122,35 @@ async function handleSyncEvent(event: SyncEvent) {
                 const localNote = appState.notes[noteIndex];
                 const serverNote = event.data as unknown as Note;
 
-                // Conflict detection: server is newer AND content differs
-                const serverTime = new Date(serverNote.updated_at).getTime();
-                const localTime = new Date(localNote.updated_at).getTime();
+                // Check if this note has pending local changes that haven't synced
+                const noteId = localNote.id as number; // Server synced notes always have numeric IDs
+                const hasPendingLocalChanges = pendingSyncNotes.has(noteId);
                 const contentDiffers = localNote.content_blob !== serverNote.content_blob;
 
-                if (serverTime > localTime && contentDiffers && localNote.content_blob) {
-                    // CONFLICT: Create conflict copy of local version
-                    console.log('[Sync] Conflict detected for note:', localNote.id);
-                    await createConflictCopy(localNote);
+                // CONFLICT: Local has unsaved changes AND server content is different
+                if (hasPendingLocalChanges && contentDiffers) {
+                    console.log('[Sync] CONFLICT from SSE: note', noteId, 'has pending local changes');
+
+                    // Queue for manual resolution - don't overwrite local
+                    const conflict: PendingConflict = {
+                        noteId: noteId,
+                        noteTitle: localNote.title,
+                        localContent: localNote.content_blob,
+                        serverContent: serverNote.content_blob,
+                        localTimestamp: localNote.updated_at,
+                        serverTimestamp: serverNote.updated_at
+                    };
+
+                    // Add to pending conflicts if not already queued
+                    if (!appState.pendingConflicts.some(c => c.noteId === localNote.id)) {
+                        appState.pendingConflicts = [...appState.pendingConflicts, conflict];
+                    }
+
+                    // DON'T overwrite local - user must resolve
+                    break;
                 }
 
-                // Apply server version
+                // No conflict - apply server version
                 Object.assign(appState.notes[noteIndex], serverNote);
             } else {
                 // Note doesn't exist locally, add it (spread for Svelte 5 reactivity)
@@ -398,6 +415,20 @@ export async function saveNote(
 
 // Notes pending sync when back online
 const pendingSyncNotes = new Set<number>();
+
+// Load pending sync notes from localStorage at startup (so SSE conflict detection works)
+if (typeof localStorage !== 'undefined') {
+    try {
+        const stored = localStorage.getItem('wolffia_pending_sync');
+        if (stored) {
+            const ids = JSON.parse(stored) as number[];
+            ids.forEach(id => pendingSyncNotes.add(id));
+            console.log('[Sync] Loaded pending sync notes from storage:', [...pendingSyncNotes]);
+        }
+    } catch {
+        // Ignore parse errors
+    }
+}
 
 function markNoteForSync(noteId: number) {
     pendingSyncNotes.add(noteId);
