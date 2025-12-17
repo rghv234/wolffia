@@ -139,19 +139,48 @@ async function networkFirst(request) {
 
 /**
  * Stale-While-Revalidate strategy
+ * Returns cached immediately, refreshes in background
+ * Falls back to offline page if completely unavailable
  */
 async function staleWhileRevalidate(request) {
     const cache = await caches.open(CACHE_NAME);
     const cached = await cache.match(request);
 
-    const networkPromise = fetch(request).then((response) => {
+    // If we have a cache, return it and update in background
+    if (cached) {
+        fetch(request).then((response) => {
+            if (response.ok) {
+                cache.put(request, response.clone());
+            }
+        }).catch(() => {
+            // Network failed, that's fine - we have cache
+        });
+        return cached;
+    }
+
+    // No cache - try network
+    try {
+        const response = await fetch(request);
         if (response.ok) {
             cache.put(request, response.clone());
         }
         return response;
-    });
+    } catch (error) {
+        // Network failed and no cache - try to return root page for SPA routing
+        const rootCached = await cache.match('/');
+        if (rootCached) {
+            return rootCached;
+        }
 
-    return cached || networkPromise;
+        // Nothing available - return offline response
+        return new Response(
+            '<html><body style="font-family:system-ui;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;"><div style="text-align:center"><h1>Offline</h1><p>Please connect to the internet and refresh.</p></div></body></html>',
+            {
+                status: 503,
+                headers: { 'Content-Type': 'text/html' }
+            }
+        );
+    }
 }
 
 /**

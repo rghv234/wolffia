@@ -68,9 +68,40 @@
     }
 
     // Sync pending notes when coming back online
-    const handleOnline = () => {
-      console.log("[PWA] Back online - syncing pending notes");
-      syncPendingNotes();
+    const handleOnline = async () => {
+      console.log("[PWA] Back online - syncing pending changes");
+      await syncPendingNotes();
+
+      // Sync pending deletes
+      const pendingDeletes = localStorage.getItem("wolffia_pending_deletes");
+      if (pendingDeletes) {
+        const ids: number[] = JSON.parse(pendingDeletes);
+        const remaining: number[] = [];
+        const { notes: notesApi } = await import("$lib/api");
+
+        for (const noteId of ids) {
+          try {
+            const result = await notesApi.delete(noteId);
+            if (!result.error) {
+              console.log("[PWA] Synced pending delete:", noteId);
+            } else {
+              remaining.push(noteId);
+            }
+          } catch {
+            remaining.push(noteId);
+          }
+        }
+
+        if (remaining.length > 0) {
+          localStorage.setItem(
+            "wolffia_pending_deletes",
+            JSON.stringify(remaining),
+          );
+        } else {
+          localStorage.removeItem("wolffia_pending_deletes");
+        }
+      }
+
       // Also try to reconnect SSE
       loadAllData();
       connectSync();

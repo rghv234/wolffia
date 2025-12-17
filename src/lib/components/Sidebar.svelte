@@ -35,6 +35,53 @@
             onImportExportClick?: () => void;
         }>();
 
+    // Pending deletes for offline support
+    const PENDING_DELETES_KEY = "wolffia_pending_deletes";
+
+    function queuePendingDelete(noteId: number) {
+        const stored = localStorage.getItem(PENDING_DELETES_KEY);
+        const pending: number[] = stored ? JSON.parse(stored) : [];
+        if (!pending.includes(noteId)) {
+            pending.push(noteId);
+            localStorage.setItem(PENDING_DELETES_KEY, JSON.stringify(pending));
+            console.log(
+                "[Sidebar] Note queued for deletion when online:",
+                noteId,
+            );
+        }
+    }
+
+    // Sync pending deletes when back online (call this from +layout.svelte)
+    export async function syncPendingDeletes() {
+        const stored = localStorage.getItem(PENDING_DELETES_KEY);
+        if (!stored) return;
+
+        const pending: number[] = JSON.parse(stored);
+        const remaining: number[] = [];
+
+        for (const noteId of pending) {
+            try {
+                const result = await notesApi.delete(noteId);
+                if (result.error) {
+                    remaining.push(noteId); // Keep for later
+                } else {
+                    console.log("[Sidebar] Synced pending delete:", noteId);
+                }
+            } catch {
+                remaining.push(noteId); // Still offline
+            }
+        }
+
+        if (remaining.length > 0) {
+            localStorage.setItem(
+                PENDING_DELETES_KEY,
+                JSON.stringify(remaining),
+            );
+        } else {
+            localStorage.removeItem(PENDING_DELETES_KEY);
+        }
+    }
+
     // Folder modal state
     let showFolderModal = $state(false);
     let editingFolder = $state<FolderType | null>(null);
@@ -107,16 +154,25 @@
 
                 // Only call API for server notes (numeric IDs)
                 if (typeof deletedNoteId === "number") {
-                    const result = await notesApi.delete(deletedNoteId);
-                    console.log("[Sidebar] Delete result:", result);
+                    try {
+                        const result = await notesApi.delete(deletedNoteId);
+                        console.log("[Sidebar] Delete result:", result);
 
-                    if (result.error) {
-                        console.error(
-                            "[Sidebar] Delete API error:",
-                            result.error,
+                        if (result.error) {
+                            console.warn(
+                                "[Sidebar] Delete API failed (offline?), queueing for sync:",
+                                result.error,
+                            );
+                            // Queue for deletion when back online
+                            queuePendingDelete(deletedNoteId);
+                        }
+                    } catch (e) {
+                        console.warn(
+                            "[Sidebar] Delete failed (offline?), queueing for sync:",
+                            e,
                         );
-                        alert("Failed to delete note: " + result.error);
-                        return;
+                        // Queue for deletion when back online
+                        queuePendingDelete(deletedNoteId);
                     }
                 } else {
                     // Local note (string ID like 'local-xxx') - just remove from state
