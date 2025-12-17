@@ -73,6 +73,12 @@ self.addEventListener('fetch', (event) => {
     // Only handle GET requests
     if (event.request.method !== 'GET') return;
 
+    // NEVER intercept SSE/EventSource - let browser handle directly
+    const url = new URL(event.request.url);
+    if (url.pathname.startsWith('/events')) {
+        return; // Don't call respondWith - let it pass through
+    }
+
     async function respond(): Promise<Response> {
         const url = new URL(event.request.url);
         const cache = await caches.open(CACHE);
@@ -87,8 +93,7 @@ self.addEventListener('fetch', (event) => {
 
         // API requests: network first, cache fallback
         if (url.pathname.startsWith('/api/') ||
-            url.pathname.startsWith('/auth/') ||
-            url.pathname.startsWith('/events')) {
+            url.pathname.startsWith('/auth/')) {
             try {
                 const response = await fetch(event.request);
                 return response;
