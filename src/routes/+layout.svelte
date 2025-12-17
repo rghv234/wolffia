@@ -13,6 +13,7 @@
   import SettingsModal from "$lib/components/SettingsModal.svelte";
   import ImportExportModal from "$lib/components/ImportExportModal.svelte";
   import SaveModal from "$lib/components/SaveModal.svelte";
+  import ConflictModal from "$lib/components/ConflictModal.svelte";
   import { Plus, Columns3, SplitSquareHorizontal } from "@lucide/svelte";
   import {
     appState,
@@ -22,7 +23,12 @@
     enableSplitView,
     disableSplitView,
   } from "$lib/stores/app.svelte";
-  import { loadAllData, connectSync, syncPendingNotes } from "$lib/sync";
+  import {
+    loadAllData,
+    connectSync,
+    syncPendingNotes,
+    resolveConflict,
+  } from "$lib/sync";
   import { initKeyboardShortcuts } from "$lib/shortcuts";
   import { restoreEncryptionKey } from "$lib/crypto";
 
@@ -461,4 +467,22 @@
     onClose={() => (showImportExport = false)}
   />
   <SaveModal />
+
+  <!-- Conflict Resolution Modal -->
+  {#if appState.pendingConflicts.length > 0}
+    {@const conflict = appState.pendingConflicts[0]}
+    <ConflictModal
+      open={true}
+      noteTitle={conflict.noteTitle}
+      localContent={conflict.localContent}
+      serverContent={conflict.serverContent}
+      localTimestamp={conflict.localTimestamp}
+      serverTimestamp={conflict.serverTimestamp}
+      onResolve={(choice) => resolveConflict(conflict.noteId, choice)}
+      onClose={() => {
+        // User dismissed without choice - default to 'both' to preserve data
+        resolveConflict(conflict.noteId, "both");
+      }}
+    />
+  {/if}
 {/if}

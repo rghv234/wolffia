@@ -103,6 +103,19 @@ interface AppState {
     cursorLine: number;
     cursorCol: number;
     charCount: number;
+
+    // Conflict resolution queue
+    pendingConflicts: PendingConflict[];
+}
+
+// Pending conflict for manual resolution
+export interface PendingConflict {
+    noteId: number;
+    noteTitle: string;
+    localContent: string;       // Encrypted
+    serverContent: string;      // Encrypted
+    localTimestamp: string;
+    serverTimestamp: string;
 }
 
 // Custom shortcut definition
@@ -174,7 +187,8 @@ function createInitialState(): AppState {
         scratchpadVersion: 0, // Legacy
         cursorLine: 1,
         cursorCol: 1,
-        charCount: 0
+        charCount: 0,
+        pendingConflicts: [] // Manual conflict resolution queue
     };
 }
 

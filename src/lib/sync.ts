@@ -3,7 +3,7 @@
  * SSE client for real-time sync with optimistic updates
  */
 
-import { appState, validatePersistedState, type Note, type Folder } from './stores/app.svelte';
+import { appState, validatePersistedState, type Note, type Folder, type PendingConflict } from './stores/app.svelte';
 import { notes as notesApi, folders as foldersApi, settings as settingsApi } from './api';
 import { decryptContent, encryptContent } from './crypto';
 
@@ -200,6 +200,68 @@ async function createConflictCopy(localNote: Note) {
 }
 
 /**
+ * Resolve a conflict manually
+ * @param noteId The note ID with conflict
+ * @param choice 'local' | 'server' | 'both'
+ */
+export async function resolveConflict(noteId: number, choice: 'local' | 'server' | 'both') {
+    const conflict = appState.pendingConflicts.find(c => c.noteId === noteId);
+    if (!conflict) {
+        console.warn('[Sync] No conflict found for note:', noteId);
+        return;
+    }
+
+    const localNote = appState.notes.find(n => n.id === noteId);
+    if (!localNote) {
+        console.warn('[Sync] Note not found locally:', noteId);
+        return;
+    }
+
+    try {
+        if (choice === 'local') {
+            // Keep local version - push to server
+            console.log('[Sync] Resolving conflict: keeping LOCAL version for note:', noteId);
+            await notesApi.update(noteId, {
+                content_blob: conflict.localContent,
+                title: localNote.title
+            });
+        } else if (choice === 'server') {
+            // Keep server version - update local
+            console.log('[Sync] Resolving conflict: keeping SERVER version for note:', noteId);
+            const noteIndex = appState.notes.findIndex(n => n.id === noteId);
+            if (noteIndex >= 0) {
+                appState.notes[noteIndex].content_blob = conflict.serverContent;
+                appState.notes[noteIndex].updated_at = conflict.serverTimestamp;
+            }
+        } else if (choice === 'both') {
+            // Keep both - push local, but also create copy of server
+            console.log('[Sync] Resolving conflict: keeping BOTH versions for note:', noteId);
+
+            // Create conflict copy of server version
+            await createConflictCopy({
+                id: noteId,
+                folder_id: localNote.folder_id,
+                title: localNote.title,
+                content_blob: conflict.serverContent,
+                updated_at: conflict.serverTimestamp
+            });
+
+            // Push local version to server
+            await notesApi.update(noteId, {
+                content_blob: conflict.localContent,
+                title: localNote.title
+            });
+        }
+
+        // Remove from pending conflicts
+        appState.pendingConflicts = appState.pendingConflicts.filter(c => c.noteId !== noteId);
+        console.log('[Sync] Conflict resolved for note:', noteId);
+    } catch (e) {
+        console.error('[Sync] Failed to resolve conflict:', e);
+    }
+}
+
+/**
  * Load all data from server (with offline fallback)
  */
 export async function loadAllData() {
@@ -361,12 +423,46 @@ export async function syncPendingNotes() {
     console.log('[Sync] Syncing pending notes:', [...pendingSyncNotes]);
 
     for (const noteId of pendingSyncNotes) {
-        const note = appState.notes.find(n => n.id === noteId);
-        if (note) {
+        const localNote = appState.notes.find(n => n.id === noteId);
+        if (localNote) {
             try {
+                // CONFLICT CHECK: Fetch current server version first
+                const serverResult = await notesApi.get(noteId);
+
+                if (serverResult.data) {
+                    const serverNote = serverResult.data;
+                    const serverTime = new Date(serverNote.updated_at).getTime();
+                    const localTime = new Date(localNote.updated_at).getTime();
+
+                    // If server is NEWER than what we had when we went offline,
+                    // someone else edited it - QUEUE for manual conflict resolution
+                    if (serverTime > localTime && serverNote.content_blob !== localNote.content_blob) {
+                        console.log('[Sync] CONFLICT detected for note:', noteId, '- queuing for manual resolution');
+                        console.log('[Sync] Server time:', serverNote.updated_at, 'Local time:', localNote.updated_at);
+
+                        // Queue for manual resolution - don't auto-sync
+                        const conflict: PendingConflict = {
+                            noteId,
+                            noteTitle: localNote.title,
+                            localContent: localNote.content_blob,
+                            serverContent: serverNote.content_blob,
+                            localTimestamp: localNote.updated_at,
+                            serverTimestamp: serverNote.updated_at
+                        };
+
+                        // Add to pending conflicts (use spread for Svelte 5 reactivity)
+                        appState.pendingConflicts = [...appState.pendingConflicts, conflict];
+
+                        // Don't sync this note - user must resolve first
+                        pendingSyncNotes.delete(noteId);
+                        continue; // Skip to next note
+                    }
+                }
+
+                // No conflict - push local version
                 const result = await notesApi.update(noteId, {
-                    content_blob: note.content_blob,
-                    title: note.title
+                    content_blob: localNote.content_blob,
+                    title: localNote.title
                 });
                 if (!result.error) {
                     pendingSyncNotes.delete(noteId);
@@ -374,6 +470,7 @@ export async function syncPendingNotes() {
                 }
             } catch (e) {
                 // Still offline, will retry later
+                console.log('[Sync] Failed to sync note', noteId, '- will retry');
             }
         }
     }
