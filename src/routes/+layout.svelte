@@ -136,6 +136,14 @@
       setDarkModeIntensity(appState.darkModeIntensity);
     }
 
+    // Apply saved editor font size
+    if (appState.editorFontSize) {
+      document.documentElement.style.setProperty(
+        "--editor-font-size",
+        `${appState.editorFontSize}px`,
+      );
+    }
+
     // Listen for navigation events
     window.addEventListener("popstate", updateAuthPageStatus);
 

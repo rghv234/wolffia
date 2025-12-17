@@ -945,10 +945,14 @@
                             step="1"
                             class="input input-xs input-bordered w-16 text-center"
                             value={appState.editorFontSize}
-                            oninput={(e) => {
+                            onchange={(e) => {
                                 const val = parseInt(e.currentTarget.value);
                                 if (!isNaN(val) && val >= 8 && val <= 48) {
                                     setFontSize(val);
+                                } else {
+                                    e.currentTarget.value = String(
+                                        appState.editorFontSize,
+                                    );
                                 }
                             }}
                         />
