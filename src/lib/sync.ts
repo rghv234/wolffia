@@ -295,20 +295,33 @@ export async function loadAllData() {
         // Try to load from server
         console.log('[Sync] Fetching data from server...');
 
-        // IMPORTANT: Save notes with pending changes BEFORE clearing
+        // IMPORTANT: Save notes with pending changes from localStorage DIRECTLY
+        // (reading from appState might fail if it's been cleared by another operation)
         const pendingNotesCopy = new Map<number, Note>();
         const storedPending = localStorage.getItem('wolffia_pending_sync');
-        if (storedPending) {
+        const storedAppState = localStorage.getItem('wolffia_state');
+
+        if (storedPending && storedAppState) {
             try {
                 const pendingIds = JSON.parse(storedPending) as number[];
+                const savedState = JSON.parse(storedAppState);
+                const savedNotes = savedState.notes || [];
+
+                console.log('[Sync] Checking for pending notes. Pending IDs:', pendingIds);
+                console.log('[Sync] Saved notes in localStorage:', savedNotes.length);
+
                 for (const id of pendingIds) {
-                    const note = appState.notes.find(n => n.id === id);
+                    const note = savedNotes.find((n: Note) => n.id === id);
                     if (note) {
                         pendingNotesCopy.set(id, { ...note });
-                        console.log('[Sync] Preserving pending note:', id);
+                        console.log('[Sync] Preserving pending note:', id, 'title:', note.title);
+                    } else {
+                        console.log('[Sync] Pending note not found in localStorage:', id);
                     }
                 }
-            } catch { /* ignore */ }
+            } catch (e) {
+                console.warn('[Sync] Error reading pending notes:', e);
+            }
         }
 
         // Clear stale data
