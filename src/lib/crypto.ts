@@ -108,10 +108,16 @@ export async function setEncryptionKey(key: CryptoKey): Promise<void> {
  * Restore encryption key from cache (call on page load)
  */
 export async function restoreEncryptionKey(): Promise<boolean> {
-    if (encryptionKey) return true; // Already have key
+    if (encryptionKey) {
+        console.log('[Crypto] Encryption key already set');
+        return true;
+    }
 
     const cached = localStorage.getItem(ENCRYPTED_KEY_STORAGE);
-    if (!cached) return false;
+    if (!cached) {
+        console.log('[Crypto] No cached encryption key found in localStorage');
+        return false;
+    }
 
     try {
         // Convert Base64 back to raw key bytes
