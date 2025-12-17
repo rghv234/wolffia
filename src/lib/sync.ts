@@ -295,9 +295,23 @@ export async function loadAllData() {
         // Try to load from server
         console.log('[Sync] Fetching data from server...');
 
-        // IMPORTANT: Clear stale localStorage data BEFORE fetching from server
-        // This prevents stale notes from persisting when logged in
-        // The server is the source of truth for authenticated users
+        // IMPORTANT: Save notes with pending changes BEFORE clearing
+        const pendingNotesCopy = new Map<number, Note>();
+        const storedPending = localStorage.getItem('wolffia_pending_sync');
+        if (storedPending) {
+            try {
+                const pendingIds = JSON.parse(storedPending) as number[];
+                for (const id of pendingIds) {
+                    const note = appState.notes.find(n => n.id === id);
+                    if (note) {
+                        pendingNotesCopy.set(id, { ...note });
+                        console.log('[Sync] Preserving pending note:', id);
+                    }
+                }
+            } catch { /* ignore */ }
+        }
+
+        // Clear stale data
         appState.notes = [];
         appState.folders = [];
 
@@ -317,7 +331,39 @@ export async function loadAllData() {
         console.log('[Sync] Server data:', notesData.length, 'notes,', foldersData.length, 'folders');
 
         appState.folders = foldersData;
-        appState.notes = notesData;
+
+        // CONFLICT DETECTION: Check pending notes against server versions
+        const finalNotes: Note[] = [];
+        for (const serverNote of notesData) {
+            const pendingLocal = pendingNotesCopy.get(serverNote.id);
+
+            if (pendingLocal && pendingLocal.content_blob !== serverNote.content_blob) {
+                // CONFLICT: Local has changes that differ from server
+                console.log('[Sync] CONFLICT in loadAllData for note:', serverNote.id);
+
+                const conflict: PendingConflict = {
+                    noteId: serverNote.id,
+                    noteTitle: pendingLocal.title,
+                    localContent: pendingLocal.content_blob,
+                    serverContent: serverNote.content_blob,
+                    localTimestamp: pendingLocal.updated_at,
+                    serverTimestamp: serverNote.updated_at
+                };
+
+                // Queue conflict for manual resolution
+                if (!appState.pendingConflicts.some(c => c.noteId === serverNote.id)) {
+                    appState.pendingConflicts = [...appState.pendingConflicts, conflict];
+                }
+
+                // Keep LOCAL version until user resolves conflict
+                finalNotes.push(pendingLocal);
+            } else {
+                // No conflict - use server version
+                finalNotes.push(serverNote);
+            }
+        }
+
+        appState.notes = finalNotes;
 
         // ALWAYS cache server data (even if empty) to clear stale cache
         await cacheServerData(notesData as any[], foldersData as any[]);
