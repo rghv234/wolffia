@@ -320,7 +320,7 @@
       <!-- Mobile FAB with Flower Speed-Dial for save format -->
       <div class="fab lg:hidden">
         {#if Object.keys(appState.untitledNotes).length > 0 || (appState.splitView?.enabled && appState.splitView?.activePaneNoteId && typeof appState.splitView.activePaneNoteId === "string" && appState.splitView.activePaneNoteId.startsWith("untitled-"))}
-          <!-- Speed Dial for Save format selection -->
+          <!-- Speed Dial for Save format selection (for untitled notes) -->
           <div class="fab-speed-dial">
             <!-- Speed dial options (flower pattern) -->
             <button
@@ -375,6 +375,32 @@
               </svg>
             </button>
           </div>
+        {:else if appState.openTabs.some((t) => t.isDirty && typeof t.noteId === "number")}
+          <!-- Simple Save FAB for dirty saved notes -->
+          <button
+            class="btn btn-circle btn-warning shadow-lg transition-transform duration-300 hover:scale-110"
+            aria-label="Save Changes"
+            onclick={() =>
+              document.dispatchEvent(new CustomEvent("wolffia:save"))}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"
+              />
+              <polyline points="17 21 17 13 7 13 7 21" />
+              <polyline points="7 3 7 8 15 8" />
+            </svg>
+          </button>
         {:else}
           <!-- Simple Plus FAB for new note -->
           <button
